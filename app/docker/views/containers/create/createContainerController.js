@@ -80,7 +80,7 @@ angular.module('portainer.docker').controller('CreateContainerController', [
       CmdMode: 'default',
       EntrypointMode: 'default',
       EnvMode: 'simple',
-      EnvContent: '',
+      EnvContent: [],
       NodeName: null,
       capabilities: [],
       LogDriverName: '',
@@ -114,10 +114,16 @@ angular.module('portainer.docker').controller('CreateContainerController', [
     $scope.switchEnvMode = function () {
       if ($scope.formValues.EnvMode == 'simple') {
         $scope.formValues.EnvMode = 'advanced';
+        var editorContent = '';
+        for (var variable in $scope.formValues.EnvContent) {
+          // TO-DO: Skip newline on last line
+          editorContent += `${$scope.formValues.EnvContent[variable].name}=${$scope.formValues.EnvContent[variable].value || ''}\n`;
+        }
+        $scope.formValues.EnvContent = editorContent;
       } else {
         $scope.formValues.EnvMode = 'simple';
+        $scope.formValues.EnvContent = $scope.parseVariables($scope.formValues.EnvContent);
       }
-      // TO-DO: Convert data between modes
     };
 
     $scope.config = {
@@ -159,15 +165,29 @@ angular.module('portainer.docker').controller('CreateContainerController', [
     };
 
     $scope.addEnvironmentVariable = function () {
-      $scope.config.Env.push({ name: '', value: '' });
+      $scope.formValues.EnvContent.push({ name: '', value: '' });
     };
 
     $scope.removeEnvironmentVariable = function (index) {
-      $scope.config.Env.splice(index, 1);
+      $scope.formValues.EnvContent.splice(index, 1);
     };
 
     $scope.removeEnvironmentVariableValue = function (index) {
-      delete $scope.config.Env[index].value;
+      delete $scope.formValues.EnvContent[index].value;
+    };
+
+    $scope.parseVariables = function (src) {
+      var parsedVars = [];
+      const KEYVAL_REGEX = /^\s*([\w.-]+)\s*=(.*)?\s*$/;
+      const NEWLINES_REGEX = /\n|\r|\r\n/;
+
+      _.forEach(src.split(NEWLINES_REGEX), (line) => {
+        const parsedKeyValArr = line.match(KEYVAL_REGEX);
+        if (parsedKeyValArr != null) {
+          parsedVars.push({ name: parsedKeyValArr[1], value: parsedKeyValArr[2] || '' });
+        }
+      });
+      return parsedVars;
     };
 
     $scope.addFromFile = function (file) {
@@ -176,7 +196,9 @@ angular.module('portainer.docker').controller('CreateContainerController', [
         temporaryFileReader.readAsText(file);
         temporaryFileReader.onload = function (event) {
           if (event.target.result) {
-            // TO-DO: parse result and fill UI
+            var parsed = $scope.parseVariables(event.target.result);
+            $scope.formValues.EnvContent = _.concat($scope.formValues.EnvContent, parsed);
+            $scope.$apply();
           }
         };
       }
@@ -268,7 +290,10 @@ angular.module('portainer.docker').controller('CreateContainerController', [
 
     function prepareEnvironmentVariables(config) {
       var env = [];
-      config.Env.forEach(function (v) {
+      if ($scope.formValues.EnvMode == 'advanced') {
+        $scope.formValues.EnvContent = $scope.parseVariables($scope.formValues.EnvContent);
+      }
+      $scope.formValues.EnvContent.forEach(function (v) {
         if (v.name && v.value) {
           env.push(v.name + '=' + v.value);
         } else if (v.value == '') {
@@ -554,7 +579,7 @@ angular.module('portainer.docker').controller('CreateContainerController', [
           }
         }
       }
-      $scope.config.Env = envArr;
+      $scope.formValues.EnvContent = envArr;
     }
 
     function loadFromContainerLabels() {
