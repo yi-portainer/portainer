@@ -3,6 +3,7 @@ import $ from 'jquery';
 
 angular.module('portainer').run(run);
 
+/* @ngInject */
 function run($rootScope, $state, $interval, LocalStorage, EndpointProvider, SystemService, cfpLoadingBar, $transitions, HttpRequestHelper) {
   EndpointProvider.initialize();
 
