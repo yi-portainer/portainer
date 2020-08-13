@@ -72,6 +72,8 @@ angular.module('portainer.docker').controller('CreateServiceController', [
       WorkingDir: '',
       User: '',
       Env: [],
+      EnvMode: 'simple',
+      EnvContent: [],
       Labels: [],
       ContainerLabels: [],
       Volumes: [],
@@ -162,14 +164,6 @@ angular.module('portainer.docker').controller('CreateServiceController', [
 
     $scope.removeSecret = function (index) {
       $scope.formValues.Secrets.splice(index, 1);
-    };
-
-    $scope.addEnvironmentVariable = function () {
-      $scope.formValues.Env.push({ name: '', value: '' });
-    };
-
-    $scope.removeEnvironmentVariable = function (index) {
-      $scope.formValues.Env.splice(index, 1);
     };
 
     $scope.addPlacementConstraint = function () {
@@ -274,7 +268,7 @@ angular.module('portainer.docker').controller('CreateServiceController', [
 
     function prepareEnvConfig(config, input) {
       var env = [];
-      input.Env.forEach(function (v) {
+      input.EnvContent.forEach(function (v) {
         if (v.name) {
           env.push(v.name + '=' + v.value);
         }
